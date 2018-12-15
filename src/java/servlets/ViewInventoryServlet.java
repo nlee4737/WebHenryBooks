@@ -1,8 +1,14 @@
 
 package servlets;
 
+import business.Book;
+import business.ConnectionPool;
 import business.Store;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
@@ -23,11 +29,12 @@ public class ViewInventoryServlet extends HttpServlet {
         String sql = "", msg="";
         String URL="/ViewInventory.jsp";
         int storeid=0;
-        Store st = null;
-        
+        Store st = null;   
         
         ArrayList<Store> stores;
         try {
+			ConnectionPool connectionpool = ConnectionPool.getInstance();
+            Connection connection = connectionpool.getConnection();
             stores = (ArrayList<Store>) request.getSession().getAttribute("stores");
             storeid = Integer.parseInt(request.getParameter("storeid"));
             for (Store store: stores) {
@@ -35,7 +42,9 @@ public class ViewInventoryServlet extends HttpServlet {
                     request.getSession().setAttribute("store",store);
                 }
             }
-            //make inventory, fill it
+            //make inventory, fill it			
+			request.setAttribute("books", getBooksForUser(connection));
+			connection.close();
         } catch (Exception e) {
             msg = "Inventory error: " + e.getMessage();
             URL="/StoreSelection.jsp";
@@ -43,6 +52,25 @@ public class ViewInventoryServlet extends HttpServlet {
         request.setAttribute("msg",msg);
         RequestDispatcher disp = getServletContext().getRequestDispatcher(URL);
         disp.forward(request,response);
+    }
+	
+	    private ArrayList<Book> getBooksForUser(Connection connection) throws SQLException {
+        ArrayList books = new ArrayList();
+        String sql = "SELECT * FROM booklist ORDER BY bookID ";
+        PreparedStatement prepstate = connection.prepareStatement(sql);
+        ResultSet r = prepstate.executeQuery(sql);
+        while (r.next()) {
+            Book b = new Book();
+            b.setBookid(r.getString("bookID"));
+            b.setTitle(r.getString("title"));
+            b.setAuthor(r.getString("author"));
+            b.setPublishercode(r.getString("publisher_Code"));
+			b.setBooktype(r.getString("booktype"));
+			b.setPrice(r.getDouble("price"));
+            books.add(b);                
+        }
+        r.close();
+        return books;
     }
 
     // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
