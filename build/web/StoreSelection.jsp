@@ -10,7 +10,21 @@
 <html>
     <script src="ajax.js"></script>
     <script src="inventory.js"></script>
-    <script>
+    <script>       
+        function inputValidation() {
+            let bookcode = document.UpdateInventory.bookcode.value;
+            if (bookcode == null || bookcode == "") {                
+                var para = document.createElement("p");
+                var node = document.createTextNode("I DONT LIKE YOUR INPUT");
+                para.appendChild(node);      
+                
+                document.getElementById("UpdateInventory").appendChild(para);
+                document.UpdateInventory.appendChild(para);
+            } else {
+                document.UpdateInventory.submit();
+            }
+        }
+        
         function pageAction() {
             if(ajax) {
                 var sid = document.getElementById("storeid").value;

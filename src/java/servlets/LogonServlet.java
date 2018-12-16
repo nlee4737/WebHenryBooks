@@ -9,10 +9,10 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,7 +31,7 @@ public class LogonServlet extends HttpServlet {
         String URL = "/Logon.jsp";        
         int userid = 0;
         int pattempt;
-        ArrayList<Store> stores = new ArrayList<>();
+        ArrayList<Store> stores = new ArrayList();
         User u = null;
         
         try {
@@ -59,18 +59,23 @@ public class LogonServlet extends HttpServlet {
          } catch (NumberFormatException e) {
              msg += "Password not numeric. <br>";
          }
-       
+		Cookie acct = new Cookie("acct",String.valueOf(u.getUserid()));
+			acct.setMaxAge(60*2);
+			acct.setPath("/");
+			response.addCookie(acct);
         request.getSession().setAttribute("msg",msg);
         RequestDispatcher disp = getServletContext().getRequestDispatcher(URL);
         disp.forward(request,response);
     }
 
-        private User userLogin(Connection connection, int userid, int pattempt) throws SQLException {
+	private User userLogin(Connection connection, int userid, int pattempt) throws SQLException {
         User u = new User();
         
-        String sql="SELECT * FROM users WHERE userID = '" + userid + "'";
+        String sql = "SELECT * FROM users WHERE userID = ?";
         PreparedStatement ps = connection.prepareStatement(sql);
-        ResultSet results = ps.executeQuery(sql);
+		ps.setInt(1, userid);
+        ResultSet results = ps.executeQuery();
+		
         if (results.next()) {   
             u.setUserid(userid);
             u.setPassword(results.getInt("userPassword"));

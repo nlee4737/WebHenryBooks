@@ -33,5 +33,14 @@
             <input type="submit" value="Logon">
         </form>
         ${msg}
+        <%
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+            for (Cookie c: cookies) {
+        %>
+        <%= c.getName()%> = <%= c.getValue() %><br>
+        <%      }
+            }
+        %>  
     </body>
 </html>

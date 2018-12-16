@@ -1,7 +1,7 @@
-
 package servlets;
 
-import business.Book;
+import business.User;
+import business.BookInventory;
 import business.ConnectionPool;
 import business.Store;
 import java.io.IOException;
@@ -22,94 +22,103 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class ViewInventoryServlet extends HttpServlet {
 
-
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        String sql = "", msg="";
-        String URL="/ViewInventory.jsp";
-        int storeid=0;
-        Store st = null;   
-        
-        ArrayList<Store> stores;
-        try {
+	protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		response.setContentType("text/html;charset=UTF-8");
+		String sql = "", msg = "";
+		String URL = "/ViewInventory.jsp";
+		int storeid = 0;
+		Store st = null;
+		
+		request.getSession().setAttribute("user", ((User) request.getSession().getAttribute("user")));
+		
+		ArrayList<Store> stores;
+		
+		try {
 			ConnectionPool connectionpool = ConnectionPool.getInstance();
-            Connection connection = connectionpool.getConnection();
-            stores = (ArrayList<Store>) request.getSession().getAttribute("stores");
-            storeid = Integer.parseInt(request.getParameter("storeid"));
-            for (Store store: stores) {
-                if (store.getStoreid() == storeid) {
-                    request.getSession().setAttribute("store",store);
-                }
-            }
-            //make inventory, fill it			
-			request.setAttribute("books", getBooksForUser(connection));
-			connection.close();
-        } catch (Exception e) {
-            msg = "Inventory error: " + e.getMessage();
-            URL="/StoreSelection.jsp";
-        }
-        request.setAttribute("msg",msg);
-        RequestDispatcher disp = getServletContext().getRequestDispatcher(URL);
-        disp.forward(request,response);
-    }
+			Connection connection = connectionpool.getConnection();
+			stores = (ArrayList<Store>) request.getSession().getAttribute("stores");
+			storeid = Integer.parseInt(request.getParameter("storeid"));
+			
+			for (Store store : stores) {
+				if (store.getStoreid() == storeid) {
+					request.getSession().setAttribute("store", store);
+				}
+			}
+			
+			request.setAttribute("books", bookInventoryForStore(connection, storeid));
+			connection.close(); 
+		} catch (Exception e) {
+			msg = "Inventory error: " + e.getMessage();
+			URL = "/StoreSelection.jsp";
+		}
+		request.setAttribute("msg", msg);
+		RequestDispatcher disp = getServletContext().getRequestDispatcher(URL);
+		disp.forward(request, response);
+	}
+
 	
-	    private ArrayList<Book> getBooksForUser(Connection connection) throws SQLException {
-        ArrayList books = new ArrayList();
-        String sql = "SELECT * FROM booklist ORDER BY bookID ";
-        PreparedStatement prepstate = connection.prepareStatement(sql);
-        ResultSet r = prepstate.executeQuery(sql);
-        while (r.next()) {
-            Book b = new Book();
-            b.setBookid(r.getString("bookID"));
-            b.setTitle(r.getString("title"));
-            b.setAuthor(r.getString("author"));
-            b.setPublishercode(r.getString("publisher_Code"));
-			b.setBooktype(r.getString("booktype"));
-			b.setPrice(r.getDouble("price"));
-            books.add(b);                
-        }
-        r.close();
-        return books;
-    }
+	private ArrayList<BookInventory> bookInventoryForStore(Connection connection, int storeid) throws SQLException {
+		ArrayList bookInventories = new ArrayList();
 
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
+		String sql = "SELECT bookinv.storeID, bookinv.bookID, title, price, OnHand FROM bookinv, booklist WHERE bookinv.bookID = booklist.bookID and bookinv.storeID = ? ORDER BY bookID;";
+		PreparedStatement prepstate = connection.prepareStatement(sql);
+		prepstate.setInt(1, storeid);
+		ResultSet r = prepstate.executeQuery();
+		
+		
+		while (r.next()) {
+			BookInventory b = new BookInventory();
+			b.setBookcode (r.getString("bookID"));
+			b.setBookprice(r.getDouble("price"));
+			b.setBooktitle(r.getString("title"));
+			b.setQuantity (r.getInt("OnHand"));
+			b.setStore    (r.getInt("storeID"));
+			
+			bookInventories.add(b);
+		}
+		
+		r.close();
+		return bookInventories;
+	}
 
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
+	// <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
+	/**
+	 * Handles the HTTP <code>GET</code> method.
+	 *
+	 * @param request servlet request
+	 * @param response servlet response
+	 * @throws ServletException if a servlet-specific error occurs
+	 * @throws IOException if an I/O error occurs
+	 */
+	@Override
+	protected void doGet(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		processRequest(request, response);
+	}
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
+	/**
+	 * Handles the HTTP <code>POST</code> method.
+	 *
+	 * @param request servlet request
+	 * @param response servlet response
+	 * @throws ServletException if a servlet-specific error occurs
+	 * @throws IOException if an I/O error occurs
+	 */
+	@Override
+	protected void doPost(HttpServletRequest request, HttpServletResponse response)
+			throws ServletException, IOException {
+		processRequest(request, response);
+	}
+
+	/**
+	 * Returns a short description of the servlet.
+	 *
+	 * @return a String containing servlet description
+	 */
+	@Override
+	public String getServletInfo() {
+		return "Short description";
+	}// </editor-fold>
 
 }
